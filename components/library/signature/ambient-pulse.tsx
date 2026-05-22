@@ -19,77 +19,70 @@ interface AmbientPulseProps {
   className?: string;
 }
 
-// Solid base color (opacity=1) — element opacity handles the breathing effect
-const COLOR_MAP: Record<PulseColor, string> = {
-  amber: "rgb(245,158,11)",
-  blue: "rgb(96,165,250)",
-  green: "rgb(16,185,129)",
-  critical: "rgb(239,68,68)",
-  violet: "rgb(139,92,246)",
+// rgba values used for box-shadow — avoids any z-index / overflow-clip issues
+const COLOR_RGBA: Record<PulseColor, string> = {
+  amber: "245,158,11",
+  blue: "96,165,250",
+  green: "16,185,129",
+  critical: "239,68,68",
+  violet: "139,92,246",
 };
 
-const INTENSITY_RANGE: Record<
-  "soft" | "medium" | "strong",
-  [number, number]
-> = {
-  soft: [0.15, 0.35],
-  medium: [0.22, 0.5],
-  strong: [0.35, 0.7],
-};
+const INTENSITY_RANGE: Record<"soft" | "medium" | "strong", [number, number]> =
+  {
+    soft: [0.18, 0.38],
+    medium: [0.28, 0.55],
+    strong: [0.42, 0.75],
+  };
+
+function buildShadow(rgba: string, opacity: number, radius: number): string {
+  return `0 0 ${radius * 1.5}px ${radius * 0.5}px rgba(${rgba},${opacity})`;
+}
 
 export function AmbientPulse({
   children,
   color = "amber",
-  radius = 32,
+  radius = 28,
   speed = 3,
   breathe = true,
   intensity = "soft",
   className,
 }: AmbientPulseProps) {
   const prefersReduced = useReducedMotion();
-  const baseColor = COLOR_MAP[color];
-  const [minOpacity, maxOpacity] = INTENSITY_RANGE[intensity];
+  const rgba = COLOR_RGBA[color];
+  const [minOp, maxOp] = INTENSITY_RANGE[intensity];
   const shouldBreathe = breathe && !prefersReduced;
 
   return (
-    <div className={cn("relative inline-flex", className)}>
-      {/* Glow layer — sits behind content via z-index -1 */}
-      <motion.div
-        aria-hidden="true"
-        className="absolute pointer-events-none"
-        style={{
-          top: -radius / 2,
-          left: -radius / 2,
-          right: -radius / 2,
-          bottom: -radius / 2,
-          borderRadius: "inherit",
-          filter: `blur(${radius}px)`,
-          background: baseColor,
-          zIndex: -1,
-        }}
-        initial={{ opacity: minOpacity, scale: 1 }}
-        animate={
-          shouldBreathe
-            ? {
-                opacity: [minOpacity, maxOpacity, minOpacity],
-                scale: [1, 1.06, 1],
-              }
-            : { opacity: minOpacity, scale: 1 }
-        }
-        transition={
-          shouldBreathe
-            ? {
-                duration: speed,
-                repeat: Infinity,
-                ease: "easeInOut",
-                repeatType: "mirror",
-              }
-            : { duration: 0 }
-        }
-      />
-
-      {/* Content sits on top */}
-      <div className="relative z-10 w-full">{children}</div>
-    </div>
+    <motion.div
+      className={cn("relative inline-flex rounded-[inherit]", className)}
+      initial={{ boxShadow: buildShadow(rgba, minOp, radius) }}
+      animate={
+        shouldBreathe
+          ? {
+              boxShadow: [
+                buildShadow(rgba, minOp, radius),
+                buildShadow(rgba, maxOp, radius * 1.4),
+                buildShadow(rgba, minOp, radius),
+              ],
+              scale: [1, 1.01, 1],
+            }
+          : { boxShadow: buildShadow(rgba, minOp, radius) }
+      }
+      transition={
+        shouldBreathe
+          ? {
+              duration: speed,
+              repeat: Infinity,
+              ease: "easeInOut",
+              repeatType: "mirror",
+            }
+          : { duration: 0 }
+      }
+      aria-hidden="true"
+    >
+      {/* Children — rendered naturally on top, no z-index needed */}
+      <div className="w-full">{children}</div>
+    </motion.div>
   );
 }
