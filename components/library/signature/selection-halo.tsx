@@ -41,10 +41,10 @@ export function SelectionHalo({
     <div
       role="radiogroup"
       className={cn(
-        "relative flex",
+        "relative",
         layout === "grid"
           ? "grid grid-cols-2 gap-3"
-          : "flex-row gap-2 flex-wrap",
+          : "flex flex-row gap-2 flex-wrap",
         className
       )}
     >

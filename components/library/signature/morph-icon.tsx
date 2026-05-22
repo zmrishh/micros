@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 type MorphPair = "menu-close" | "play-pause" | "plus-check" | "eye-toggle";
@@ -17,201 +17,147 @@ interface MorphIconProps {
   "aria-label"?: string;
 }
 
-// All path data uses the same SVG viewBox (24 × 24) with identical point counts
-// so Framer Motion can interpolate the d attribute cleanly.
-const PATHS: Record<MorphPair, { a: string; b: string }> = {
-  "menu-close": {
-    // Hamburger (3 horizontal lines) → X
-    // encoded as a single compound path with matching segment count
-    a: "M4 6 L20 6 M4 12 L20 12 M4 18 L20 18",
-    b: "M6 6 L18 18 M12 12 L12 12 M6 18 L18 6",
-  },
-  "play-pause": {
-    // Play triangle → Pause two bars (same path structure)
-    a: "M6 4 L6 20 L20 12 Z",
-    b: "M7 4 L7 20 M17 4 L17 20",
-  },
-  "plus-check": {
-    // Plus sign → Checkmark
-    a: "M12 5 L12 19 M5 12 L19 12",
-    b: "M4 12 L9 17 L20 6",
-  },
-  "eye-toggle": {
-    // Open eye → Eye with slash
-    a: "M1 12 C1 12 5 5 12 5 C19 5 23 12 23 12 C23 12 19 19 12 19 C5 19 1 12 1 12 Z M12 9 A3 3 0 1 1 12 15 A3 3 0 1 1 12 9 Z",
-    b: "M17.94 17.94 A10.07 10.07 0 0 1 12 20 C5 20 1 12 1 12 A18.45 18.45 0 0 1 5.06 5.96 M9.9 4.24 A9.12 9.12 0 0 1 12 4 C19 4 23 12 23 12 A18.5 18.5 0 0 1 20.71 15.8 M1 1 L23 23",
-  },
-};
+const EASE = [0.4, 0, 0.2, 1] as const;
+const EASE_SPRING = [0.22, 1, 0.36, 1] as const;
 
-// For pairs that need multiple paths rendered separately (menu-close, play-pause)
-// we handle them differently — drawing each line/shape as a separate path element
-// so the morph is geometrically clean.
+// ── MenuClose: 3 lines → X ────────────────────────────────────────────────────
 
 function MenuClose({
-  active,
-  strokeWidth,
-  color,
-  prefersReduced,
-}: {
-  active: boolean;
-  strokeWidth: number;
-  color: string;
-  prefersReduced: boolean | null;
-}) {
-  const ease = [0.4, 0, 0.2, 1] as const;
-  const dur = prefersReduced ? 0 : 0.25;
+  active, sw, color, dur,
+}: { active: boolean; sw: number; color: string; dur: number }) {
   return (
     <>
-      {/* Top line → first diagonal */}
       <motion.line
-        x1="4" y1="6" x2="20" y2="6"
+        initial={false}
         animate={active ? { x1: 6, y1: 6, x2: 18, y2: 18 } : { x1: 4, y1: 6, x2: 20, y2: 6 }}
-        transition={{ duration: dur, ease }}
-        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+        transition={{ duration: dur, ease: EASE }}
+        stroke={color} strokeWidth={sw} strokeLinecap="round"
       />
-      {/* Middle line → fades out */}
       <motion.line
         x1="4" y1="12" x2="20" y2="12"
+        initial={false}
         animate={{ opacity: active ? 0 : 1 }}
-        transition={{ duration: dur * 0.5, ease }}
-        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+        transition={{ duration: dur * 0.5, ease: EASE }}
+        stroke={color} strokeWidth={sw} strokeLinecap="round"
       />
-      {/* Bottom line → second diagonal */}
       <motion.line
-        x1="4" y1="18" x2="20" y2="18"
+        initial={false}
         animate={active ? { x1: 6, y1: 18, x2: 18, y2: 6 } : { x1: 4, y1: 18, x2: 20, y2: 18 }}
-        transition={{ duration: dur, ease }}
-        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+        transition={{ duration: dur, ease: EASE }}
+        stroke={color} strokeWidth={sw} strokeLinecap="round"
       />
     </>
   );
 }
+
+// ── PlayPause: play triangle ↔ pause bars ─────────────────────────────────────
+// Uses path-based crossfade so both icons are geometrically independent.
 
 function PlayPause({
-  active,
-  strokeWidth,
-  color,
-  prefersReduced,
-}: {
-  active: boolean;
-  strokeWidth: number;
-  color: string;
-  prefersReduced: boolean | null;
-}) {
-  const dur = prefersReduced ? 0 : 0.28;
-  const ease = [0.4, 0, 0.2, 1] as const;
-  // Play: filled triangle. Pause: two rectangles.
-  // We use paths that share the same number of commands for clean morph.
+  active, sw, color, dur,
+}: { active: boolean; sw: number; color: string; dur: number }) {
   return (
     <>
-      {/* Left bar / left edge of play */}
+      {/* Play icon */}
+      <motion.path
+        d="M6 4 L6 20 L20 12 Z"
+        fill={color}
+        stroke="none"
+        initial={false}
+        animate={{ opacity: active ? 0 : 1, scale: active ? 0.8 : 1 }}
+        transition={{ duration: dur, ease: EASE }}
+        style={{ transformOrigin: "13px 12px" }}
+      />
+      {/* Pause left bar */}
       <motion.line
         x1="7" y1="4" x2="7" y2="20"
-        animate={active ? { x1: 7, y1: 4, x2: 7, y2: 20 } : { x1: 6, y1: 4, x2: 6, y2: 20, opacity: 0 }}
-        transition={{ duration: dur, ease }}
-        stroke={color} strokeWidth={active ? strokeWidth : 0} strokeLinecap="round"
+        initial={false}
+        animate={{ opacity: active ? 1 : 0 }}
+        transition={{ duration: dur, ease: EASE }}
+        stroke={color} strokeWidth={sw * 2.2} strokeLinecap="round"
       />
-      {/* Right bar / apex of play */}
+      {/* Pause right bar */}
       <motion.line
         x1="17" y1="4" x2="17" y2="20"
-        animate={active ? { x1: 17, y1: 4, x2: 17, y2: 20 } : { x1: 20, y1: 12, x2: 20, y2: 12, opacity: 0 }}
-        transition={{ duration: dur, ease }}
-        stroke={color} strokeWidth={active ? strokeWidth : 0} strokeLinecap="round"
-      />
-      {/* Play triangle polygon, hidden in pause mode */}
-      <motion.polygon
-        points="6,4 6,20 20,12"
-        animate={{ opacity: active ? 0 : 1 }}
-        transition={{ duration: dur * 0.6 }}
-        fill={color}
+        initial={false}
+        animate={{ opacity: active ? 1 : 0 }}
+        transition={{ duration: dur, ease: EASE }}
+        stroke={color} strokeWidth={sw * 2.2} strokeLinecap="round"
       />
     </>
   );
 }
+
+// ── PlusCheck: plus sign → checkmark ─────────────────────────────────────────
 
 function PlusCheck({
-  active,
-  strokeWidth,
-  color,
-  prefersReduced,
-}: {
-  active: boolean;
-  strokeWidth: number;
-  color: string;
-  prefersReduced: boolean | null;
-}) {
-  const dur = prefersReduced ? 0 : 0.3;
-  const ease = [0.22, 1, 0.36, 1] as const;
+  active, sw, color, dur,
+}: { active: boolean; sw: number; color: string; dur: number }) {
   return (
     <>
-      {/* Vertical arm → disappears for check */}
+      {/* Vertical arm → hides for check */}
       <motion.line
         x1="12" y1="5" x2="12" y2="19"
-        animate={{ opacity: active ? 0 : 1, scaleY: active ? 0 : 1 }}
-        transition={{ duration: dur * 0.5 }}
-        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
-        style={{ transformOrigin: "12px 12px" }}
+        initial={false}
+        animate={{ opacity: active ? 0 : 1 }}
+        transition={{ duration: dur * 0.4 }}
+        stroke={color} strokeWidth={sw} strokeLinecap="round"
       />
-      {/* Horizontal arm → morphs to check short arm */}
+      {/* Horizontal arm → morphs to check short leg */}
       <motion.line
-        animate={
-          active
-            ? { x1: 4, y1: 12, x2: 9, y2: 17 }
-            : { x1: 5, y1: 12, x2: 19, y2: 12 }
-        }
-        transition={{ duration: dur, ease }}
-        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+        initial={false}
+        animate={active ? { x1: 4, y1: 12, x2: 9, y2: 17 } : { x1: 5, y1: 12, x2: 19, y2: 12 }}
+        transition={{ duration: dur, ease: EASE_SPRING }}
+        stroke={color} strokeWidth={sw} strokeLinecap="round"
       />
-      {/* Check long arm — hidden on plus */}
+      {/* Check long leg — hidden on plus */}
       <motion.line
         x1="9" y1="17" x2="20" y2="6"
-        animate={{ opacity: active ? 1 : 0, pathLength: active ? 1 : 0 }}
-        transition={{ duration: dur, ease, delay: active ? 0.08 : 0 }}
-        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+        initial={false}
+        animate={{ opacity: active ? 1 : 0 }}
+        transition={{ duration: dur * 0.6, delay: active ? dur * 0.25 : 0 }}
+        stroke={color} strokeWidth={sw} strokeLinecap="round"
       />
     </>
   );
 }
 
+// ── EyeToggle: open eye ↔ eye-off ────────────────────────────────────────────
+
 function EyeToggle({
-  active,
-  strokeWidth,
-  color,
-  prefersReduced,
-}: {
-  active: boolean;
-  strokeWidth: number;
-  color: string;
-  prefersReduced: boolean | null;
-}) {
-  const dur = prefersReduced ? 0 : 0.3;
-  const ease = [0.4, 0, 0.2, 1] as const;
+  active, sw, color, dur,
+}: { active: boolean; sw: number; color: string; dur: number }) {
   return (
     <>
-      {/* Outer eye shape */}
+      {/* Outer eye */}
       <motion.path
         d="M1 12 C5 5 19 5 23 12 C19 19 5 19 1 12 Z"
-        animate={{ opacity: active ? 0.4 : 1 }}
-        transition={{ duration: dur, ease }}
-        stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinecap="round"
+        initial={false}
+        animate={{ opacity: active ? 0.3 : 1 }}
+        transition={{ duration: dur, ease: EASE }}
+        stroke={color} strokeWidth={sw} fill="none" strokeLinecap="round"
       />
-      {/* Pupil — shrinks on close */}
+      {/* Pupil */}
       <motion.circle
         cx="12" cy="12"
+        initial={false}
         animate={{ r: active ? 0 : 3 }}
-        transition={{ duration: dur, ease }}
-        stroke={color} strokeWidth={strokeWidth} fill="none"
+        transition={{ duration: dur, ease: EASE }}
+        stroke={color} strokeWidth={sw} fill="none"
       />
-      {/* Slash — appears when eye closed */}
+      {/* Slash — visible when eye is closed (active=true) */}
       <motion.line
         x1="3" y1="3" x2="21" y2="21"
-        animate={{ opacity: active ? 1 : 0, pathLength: active ? 1 : 0 }}
-        transition={{ duration: dur, ease }}
-        stroke={color} strokeWidth={strokeWidth} strokeLinecap="round"
+        initial={false}
+        animate={{ opacity: active ? 1 : 0 }}
+        transition={{ duration: dur * 0.7 }}
+        stroke={color} strokeWidth={sw} strokeLinecap="round"
       />
     </>
   );
 }
+
+// ── Root component ─────────────────────────────────────────────────────────────
 
 export function MorphIcon({
   pair,
@@ -224,21 +170,24 @@ export function MorphIcon({
   "aria-label": ariaLabel,
 }: MorphIconProps) {
   const prefersReduced = useReducedMotion();
+  const dur = prefersReduced ? 0 : 0.28;
 
-  const content = {
-    "menu-close": (
-      <MenuClose active={active} strokeWidth={strokeWidth} color={color} prefersReduced={prefersReduced} />
-    ),
-    "play-pause": (
-      <PlayPause active={active} strokeWidth={strokeWidth} color={color} prefersReduced={prefersReduced} />
-    ),
-    "plus-check": (
-      <PlusCheck active={active} strokeWidth={strokeWidth} color={color} prefersReduced={prefersReduced} />
-    ),
-    "eye-toggle": (
-      <EyeToggle active={active} strokeWidth={strokeWidth} color={color} prefersReduced={prefersReduced} />
-    ),
-  }[pair];
+  const sharedProps = { active, sw: strokeWidth, color, dur };
+
+  const content = (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      {pair === "menu-close" && <MenuClose {...sharedProps} />}
+      {pair === "play-pause" && <PlayPause {...sharedProps} />}
+      {pair === "plus-check" && <PlusCheck {...sharedProps} />}
+      {pair === "eye-toggle" && <EyeToggle {...sharedProps} />}
+    </svg>
+  );
 
   const label = ariaLabel ?? (active ? "active" : "inactive");
 
@@ -255,30 +204,17 @@ export function MorphIcon({
           className
         )}
       >
-        <svg
-          width={size}
-          height={size}
-          viewBox="0 0 24 24"
-          fill="none"
-          aria-hidden="true"
-        >
-          {content}
-        </svg>
+        {content}
       </button>
     );
   }
 
   return (
-    <span aria-label={label} className={cn("inline-flex items-center justify-center", className)}>
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
-      >
-        {content}
-      </svg>
+    <span
+      aria-label={label}
+      className={cn("inline-flex items-center justify-center", className)}
+    >
+      {content}
     </span>
   );
 }

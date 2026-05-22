@@ -19,26 +19,23 @@ interface AmbientPulseProps {
   className?: string;
 }
 
+// Solid base color (opacity=1) — element opacity handles the breathing effect
 const COLOR_MAP: Record<PulseColor, string> = {
-  amber: "rgba(245,158,11,VAR)",
-  blue: "rgba(96,165,250,VAR)",
-  green: "rgba(16,185,129,VAR)",
-  critical: "rgba(239,68,68,VAR)",
-  violet: "rgba(139,92,246,VAR)",
+  amber: "rgb(245,158,11)",
+  blue: "rgb(96,165,250)",
+  green: "rgb(16,185,129)",
+  critical: "rgb(239,68,68)",
+  violet: "rgb(139,92,246)",
 };
 
 const INTENSITY_RANGE: Record<
   "soft" | "medium" | "strong",
   [number, number]
 > = {
-  soft: [0.12, 0.28],
-  medium: [0.18, 0.42],
-  strong: [0.28, 0.6],
+  soft: [0.15, 0.35],
+  medium: [0.22, 0.5],
+  strong: [0.35, 0.7],
 };
-
-function resolveColor(template: string, opacity: number): string {
-  return template.replace("VAR", String(opacity));
-}
 
 export function AmbientPulse({
   children,
@@ -50,23 +47,27 @@ export function AmbientPulse({
   className,
 }: AmbientPulseProps) {
   const prefersReduced = useReducedMotion();
-  const colorTemplate = COLOR_MAP[color];
+  const baseColor = COLOR_MAP[color];
   const [minOpacity, maxOpacity] = INTENSITY_RANGE[intensity];
   const shouldBreathe = breathe && !prefersReduced;
 
   return (
     <div className={cn("relative inline-flex", className)}>
-      {/* Glow layer — sits behind content */}
+      {/* Glow layer — sits behind content via z-index -1 */}
       <motion.div
         aria-hidden="true"
-        className="absolute rounded-[inherit] pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
-          inset: -radius / 2,
+          top: -radius / 2,
+          left: -radius / 2,
+          right: -radius / 2,
+          bottom: -radius / 2,
           borderRadius: "inherit",
           filter: `blur(${radius}px)`,
-          background: resolveColor(colorTemplate, maxOpacity),
+          background: baseColor,
           zIndex: -1,
         }}
+        initial={{ opacity: minOpacity, scale: 1 }}
         animate={
           shouldBreathe
             ? {

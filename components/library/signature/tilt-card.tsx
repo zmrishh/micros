@@ -84,7 +84,7 @@ export function TiltCard({
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      style={{ perspective: 800 }}
+      style={isDisabled ? {} : { perspective: 800 }}
       className={cn("relative", className)}
     >
       <motion.div

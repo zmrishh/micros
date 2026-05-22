@@ -35,20 +35,7 @@ const CHAR_VARIANTS: Record<CascadeVariant, Variants> = {
   },
 };
 
-const CHAR_TRANSITION = {
-  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
-  duration: 0.45,
-};
-
-function getStaggerOrder(
-  chars: string[],
-  direction: CascadeDirection
-): number[] {
-  if (direction === "ltr") return chars.map((_, i) => i);
-  // center-out: characters near center get smallest delay
-  const mid = (chars.length - 1) / 2;
-  return chars.map((_, i) => Math.abs(i - mid));
-}
+const CHAR_EASE = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
 export function CascadeReveal({
   text,
@@ -69,15 +56,19 @@ export function CascadeReveal({
   });
 
   const shouldAnimate = trigger === "mount" || (trigger === "visible" && isInView);
-
-  // Split by word to preserve natural word-spacing, then by char within each word
-  const words = text.split(" ");
   const charVariant = CHAR_VARIANTS[variant];
 
-  // Build flat char list for stagger calculation
-  const allChars = text.replace(/ /g, "\u00A0").split("");
-  const staggerOrder = getStaggerOrder(allChars, direction);
-  let charIdx = 0;
+  // Build flat list of chars excluding spaces for clean stagger indexing
+  const words = text.split(" ");
+  const totalNonSpaceChars = words.reduce((sum, w) => sum + w.length, 0);
+
+  function getDelay(flatCharIndex: number): number {
+    if (direction === "ltr") return delay + flatCharIndex * stagger;
+    const mid = (totalNonSpaceChars - 1) / 2;
+    return delay + Math.abs(flatCharIndex - mid) * stagger;
+  }
+
+  let flatIndex = 0;
 
   return (
     <Tag
@@ -85,36 +76,27 @@ export function CascadeReveal({
       aria-label={text}
       className={cn("inline-flex flex-wrap gap-x-[0.25em]", className)}
     >
-      {words.map((word, wIdx) => {
-        const wordChars = word.split("");
-        return (
-          <span key={wIdx} className="inline-flex" aria-hidden="true">
-            {wordChars.map((char) => {
-              const order = staggerOrder[charIdx];
-              charIdx++;
-              return (
-                <span
-                  key={charIdx}
-                  className="inline-block overflow-hidden"
+      {words.map((word, wIdx) => (
+        <span key={wIdx} className="inline-flex" aria-hidden="true">
+          {word.split("").map((char, cIdx) => {
+            const d = getDelay(flatIndex);
+            flatIndex++;
+            return (
+              <span key={cIdx} className="inline-block overflow-hidden">
+                <motion.span
+                  className={cn("inline-block", charClassName)}
+                  variants={charVariant}
+                  initial="hidden"
+                  animate={shouldAnimate ? "visible" : "hidden"}
+                  transition={{ ease: CHAR_EASE, duration: 0.45, delay: d }}
                 >
-                  <motion.span
-                    className={cn("inline-block", charClassName)}
-                    variants={charVariant}
-                    initial="hidden"
-                    animate={shouldAnimate ? "visible" : "hidden"}
-                    transition={{
-                      ...CHAR_TRANSITION,
-                      delay: delay + order * stagger,
-                    }}
-                  >
-                    {char}
-                  </motion.span>
-                </span>
-              );
-            })}
-          </span>
-        );
-      })}
+                  {char}
+                </motion.span>
+              </span>
+            );
+          })}
+        </span>
+      ))}
     </Tag>
   );
 }

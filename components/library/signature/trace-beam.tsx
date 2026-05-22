@@ -10,9 +10,10 @@ interface TraceBeamProps {
   children: React.ReactNode;
   state?: TraceState;
   /**
-   * If true, the trace pauses at 100% on "success" instead of looping
+   * Background color used for the inner mask that creates the border-only beam
+   * effect. Must match the card's actual background. Defaults to #111111.
    */
-  pauseOnSuccess?: boolean;
+  background?: string;
   className?: string;
 }
 
@@ -60,6 +61,7 @@ const STATE_CONFIG: Record<
 export function TraceBeam({
   children,
   state = "idle",
+  background = "#111111",
   className,
 }: TraceBeamProps) {
   const prefersReduced = useReducedMotion();
@@ -102,8 +104,11 @@ export function TraceBeam({
               ease: "linear",
             }}
           />
-          {/* Inner mask to create thin border beam effect */}
-          <div className="absolute inset-[1.5px] rounded-[calc(1rem-1.5px)] bg-inherit" />
+          {/* Inner mask to create thin border beam effect. Must match card background. */}
+          <div
+            className="absolute inset-[1.5px] rounded-[calc(1rem-1.5px)]"
+            style={{ background }}
+          />
         </div>
       )}
 

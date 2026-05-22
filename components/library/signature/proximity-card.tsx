@@ -32,7 +32,6 @@ export function ProximityCard({
   className,
 }: ProximityCardProps) {
   const prefersReduced = useReducedMotion();
-  const containerRef = React.useRef<HTMLDivElement>(null);
   const cardRef = React.useRef<HTMLDivElement>(null);
 
   const rawGlow = useMotionValue(0);
@@ -51,18 +50,24 @@ export function ProximityCard({
       if (prefersReduced || !cardRef.current) return;
       const rect = cardRef.current.getBoundingClientRect();
 
-      // Nearest point on card boundary
       const nearestX = Math.max(rect.left, Math.min(e.clientX, rect.right));
       const nearestY = Math.max(rect.top, Math.min(e.clientY, rect.bottom));
       const distance = Math.sqrt(
         (e.clientX - nearestX) ** 2 + (e.clientY - nearestY) ** 2
       );
 
+      if (distance > activationRadius) {
+        rawGlow.set(0);
+        rawScale.set(1);
+        ctaOpacity.set(0);
+        setIsHovered(false);
+        return;
+      }
+
       const intensity = Math.max(0, 1 - distance / activationRadius);
       rawGlow.set(intensity);
 
       if (distance === 0) {
-        // Cursor is inside card
         setIsHovered(true);
         rawScale.set(1.02);
         ctaOpacity.set(1);
@@ -82,60 +87,51 @@ export function ProximityCard({
     setIsHovered(false);
   }, [rawGlow, rawScale, ctaOpacity]);
 
+  // Attach listeners to the document so they fire even before the cursor
+  // enters the card itself (true proximity detection)
   React.useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.addEventListener("mousemove", handleMouseMove);
-    container.addEventListener("mouseleave", handleMouseLeave);
+    if (prefersReduced) return;
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseleave", handleMouseLeave);
     return () => {
-      container.removeEventListener("mousemove", handleMouseMove);
-      container.removeEventListener("mouseleave", handleMouseLeave);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseleave", handleMouseLeave);
     };
-  }, [handleMouseMove, handleMouseLeave]);
+  }, [prefersReduced, handleMouseMove, handleMouseLeave]);
 
   return (
-    // Outer container catches mouse events at activation radius
-    <div
-      ref={containerRef}
-      className="relative"
-      style={{ padding: prefersReduced ? 0 : activationRadius / 4 }}
+    <motion.div
+      ref={cardRef}
+      style={prefersReduced ? {} : { scale: cardScale }}
+      className={cn(
+        "relative rounded-2xl border bg-[#111111] overflow-hidden transition-colors duration-300",
+        isHovered ? "border-zinc-600" : "border-zinc-800",
+        className
+      )}
     >
-      <motion.div
-        ref={cardRef}
-        style={prefersReduced ? {} : { scale: cardScale }}
-        className={cn(
-          "relative rounded-2xl border bg-[#111111] overflow-hidden transition-colors duration-300",
-          isHovered ? "border-zinc-600" : "border-zinc-800",
-          className
-        )}
-      >
-        {/* Glow overlay */}
-        {!prefersReduced && (
-          <motion.div
-            aria-hidden="true"
-            className="absolute inset-0 rounded-2xl pointer-events-none"
-            style={{
-              background: resolvedColor,
-              opacity: glowIntensity,
-            }}
-          />
-        )}
+      {/* Glow overlay */}
+      {!prefersReduced && (
+        <motion.div
+          aria-hidden="true"
+          className="absolute inset-0 rounded-2xl pointer-events-none"
+          style={{ background: resolvedColor, opacity: glowIntensity }}
+        />
+      )}
 
-        {children}
+      {children}
 
-        {/* CTA reveal on actual hover */}
-        {cta && (
-          <motion.div
-            style={prefersReduced ? {} : { opacity: ctaOpacity }}
-            className={cn(
-              "transition-opacity",
-              prefersReduced && (isHovered ? "opacity-100" : "opacity-0")
-            )}
-          >
-            {cta}
-          </motion.div>
-        )}
-      </motion.div>
-    </div>
+      {/* CTA reveal on actual hover */}
+      {cta && (
+        <motion.div
+          style={prefersReduced ? {} : { opacity: ctaOpacity }}
+          className={cn(
+            "transition-opacity",
+            prefersReduced && (isHovered ? "opacity-100" : "opacity-0")
+          )}
+        >
+          {cta}
+        </motion.div>
+      )}
+    </motion.div>
   );
 }
