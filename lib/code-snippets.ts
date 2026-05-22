@@ -1793,4 +1793,560 @@ export function SoftCollapse({ children, title, summary, defaultOpen = false, va
     </div>
   );
 }`,
+
+  "tilt-card": `"use client";
+
+import * as React from "react";
+import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+type TiltVariant = "subtle" | "deep" | "flat";
+
+interface TiltCardProps {
+  children: React.ReactNode;
+  variant?: TiltVariant;
+  glare?: boolean;
+  className?: string;
+}
+
+const TILT_RANGE = { subtle: 8, deep: 15, flat: 0 };
+const SPRING = { stiffness: 150, damping: 20, mass: 0.8 };
+
+export function TiltCard({ children, variant = "subtle", glare = true, className }: TiltCardProps) {
+  const prefersReduced = useReducedMotion();
+  const ref = React.useRef<HTMLDivElement>(null);
+  const isDisabled = prefersReduced || variant === "flat";
+  const range = TILT_RANGE[variant];
+
+  const rawX = useMotionValue(0);
+  const rawY = useMotionValue(0);
+  const glareX = useMotionValue(50);
+  const glareY = useMotionValue(50);
+  const rotateX = useSpring(rawX, SPRING);
+  const rotateY = useSpring(rawY, SPRING);
+  const glareOpacity = useMotionValue(0);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDisabled || !ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    rawX.set(-((e.clientY - cy) / (rect.height / 2)) * range);
+    rawY.set(((e.clientX - cx) / (rect.width / 2)) * range);
+    glareX.set(((e.clientX - rect.left) / rect.width) * 100);
+    glareY.set(((e.clientY - rect.top) / rect.height) * 100);
+    glareOpacity.set(0.12);
+  };
+
+  const handleMouseLeave = () => {
+    rawX.set(0); rawY.set(0); glareOpacity.set(0);
+  };
+
+  const glareBackground = useTransform(
+    [glareX, glareY],
+    ([x, y]: number[]) => \`radial-gradient(circle at \${x}% \${y}%, rgba(255,255,255,0.25) 0%, transparent 65%)\`
+  );
+
+  return (
+    <div ref={ref} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}
+      style={{ perspective: 800 }} className={cn("relative", className)}>
+      <motion.div
+        style={isDisabled ? {} : { rotateX, rotateY, transformStyle: "preserve-3d" }}
+        className="relative rounded-2xl overflow-hidden">
+        {children}
+        {glare && !isDisabled && (
+          <motion.div aria-hidden="true" className="absolute inset-0 rounded-2xl pointer-events-none z-10"
+            style={{ background: glareBackground, opacity: glareOpacity }} />
+        )}
+      </motion.div>
+    </div>
+  );
+}`,
+
+  "proximity-card": `"use client";
+
+import * as React from "react";
+import { motion, useMotionValue, useSpring, useReducedMotion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+interface ProximityCardProps {
+  children: React.ReactNode;
+  cta?: React.ReactNode;
+  activationRadius?: number;
+  variant?: "glow" | "depth" | "minimal";
+  className?: string;
+}
+
+const GLOW_COLOR = {
+  glow: "rgba(245,158,11,0.18)",
+  depth: "rgba(139,92,246,0.15)",
+  minimal: "rgba(255,255,255,0.07)",
+};
+
+export function ProximityCard({ children, cta, activationRadius = 180, variant = "glow", className }: ProximityCardProps) {
+  const prefersReduced = useReducedMotion();
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const rawGlow = useMotionValue(0);
+  const rawScale = useMotionValue(1);
+  const ctaOpacity = useMotionValue(0);
+  const glowIntensity = useSpring(rawGlow, { stiffness: 120, damping: 18 });
+  const cardScale = useSpring(rawScale, { stiffness: 120, damping: 18 });
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+    if (prefersReduced || !cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const nx = Math.max(rect.left, Math.min(e.clientX, rect.right));
+    const ny = Math.max(rect.top, Math.min(e.clientY, rect.bottom));
+    const dist = Math.sqrt((e.clientX - nx) ** 2 + (e.clientY - ny) ** 2);
+    const intensity = Math.max(0, 1 - dist / activationRadius);
+    rawGlow.set(intensity);
+    if (dist === 0) { setIsHovered(true); rawScale.set(1.02); ctaOpacity.set(1); }
+    else { setIsHovered(false); rawScale.set(1 + intensity * 0.012); ctaOpacity.set(0); }
+  }, [prefersReduced, activationRadius, rawGlow, rawScale, ctaOpacity]);
+
+  const handleMouseLeave = React.useCallback(() => {
+    rawGlow.set(0); rawScale.set(1); ctaOpacity.set(0); setIsHovered(false);
+  }, [rawGlow, rawScale, ctaOpacity]);
+
+  React.useEffect(() => {
+    const c = containerRef.current;
+    if (!c) return;
+    c.addEventListener("mousemove", handleMouseMove);
+    c.addEventListener("mouseleave", handleMouseLeave);
+    return () => { c.removeEventListener("mousemove", handleMouseMove); c.removeEventListener("mouseleave", handleMouseLeave); };
+  }, [handleMouseMove, handleMouseLeave]);
+
+  return (
+    <div ref={containerRef} className="relative" style={{ padding: prefersReduced ? 0 : activationRadius / 4 }}>
+      <motion.div ref={cardRef} style={prefersReduced ? {} : { scale: cardScale }}
+        className={cn("relative rounded-2xl border bg-[#111111] overflow-hidden transition-colors duration-300",
+          isHovered ? "border-zinc-600" : "border-zinc-800", className)}>
+        {!prefersReduced && (
+          <motion.div aria-hidden="true" className="absolute inset-0 rounded-2xl pointer-events-none"
+            style={{ background: GLOW_COLOR[variant], opacity: glowIntensity }} />
+        )}
+        {children}
+        {cta && <motion.div style={prefersReduced ? {} : { opacity: ctaOpacity }}>{cta}</motion.div>}
+      </motion.div>
+    </div>
+  );
+}`,
+
+  "morph-icon": `"use client";
+
+import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+type MorphPair = "menu-close" | "play-pause" | "plus-check" | "eye-toggle";
+
+interface MorphIconProps {
+  pair: MorphPair;
+  active: boolean;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+  className?: string;
+  onClick?: () => void;
+  "aria-label"?: string;
+}
+
+export function MorphIcon({ pair, active, size = 24, strokeWidth = 2, color = "currentColor", className, onClick, "aria-label": ariaLabel }: MorphIconProps) {
+  const prefersReduced = useReducedMotion();
+  const dur = prefersReduced ? 0 : 0.26;
+  const ease = [0.4, 0, 0.2, 1] as const;
+
+  const content = {
+    "menu-close": (
+      <>
+        <motion.line x1="4" y1="6" x2="20" y2="6"
+          animate={active ? { x1: 6, y1: 6, x2: 18, y2: 18 } : { x1: 4, y1: 6, x2: 20, y2: 6 }}
+          transition={{ duration: dur, ease }} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+        <motion.line x1="4" y1="12" x2="20" y2="12"
+          animate={{ opacity: active ? 0 : 1 }} transition={{ duration: dur * 0.5 }}
+          stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+        <motion.line x1="4" y1="18" x2="20" y2="18"
+          animate={active ? { x1: 6, y1: 18, x2: 18, y2: 6 } : { x1: 4, y1: 18, x2: 20, y2: 18 }}
+          transition={{ duration: dur, ease }} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      </>
+    ),
+    "plus-check": (
+      <>
+        <motion.line x1="12" y1="5" x2="12" y2="19"
+          animate={{ opacity: active ? 0 : 1 }} transition={{ duration: dur * 0.5 }}
+          stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+        <motion.line
+          animate={active ? { x1: 4, y1: 12, x2: 9, y2: 17 } : { x1: 5, y1: 12, x2: 19, y2: 12 }}
+          transition={{ duration: dur, ease }} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+        <motion.line x1="9" y1="17" x2="20" y2="6"
+          animate={{ opacity: active ? 1 : 0 }} transition={{ duration: dur, delay: active ? 0.08 : 0 }}
+          stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      </>
+    ),
+    "play-pause": (
+      <>
+        <motion.line x1="7" y1="4" x2="7" y2="20"
+          animate={{ opacity: active ? 1 : 0 }} transition={{ duration: dur }}
+          stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+        <motion.line x1="17" y1="4" x2="17" y2="20"
+          animate={{ opacity: active ? 1 : 0 }} transition={{ duration: dur }}
+          stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+        <motion.polygon points="6,4 6,20 20,12"
+          animate={{ opacity: active ? 0 : 1 }} transition={{ duration: dur * 0.6 }} fill={color} />
+      </>
+    ),
+    "eye-toggle": (
+      <>
+        <motion.path d="M1 12 C5 5 19 5 23 12 C19 19 5 19 1 12 Z"
+          animate={{ opacity: active ? 0.4 : 1 }} transition={{ duration: dur, ease }}
+          stroke={color} strokeWidth={strokeWidth} fill="none" strokeLinecap="round" />
+        <motion.circle cx="12" cy="12"
+          animate={{ r: active ? 0 : 3 }} transition={{ duration: dur, ease }}
+          stroke={color} strokeWidth={strokeWidth} fill="none" />
+        <motion.line x1="3" y1="3" x2="21" y2="21"
+          animate={{ opacity: active ? 1 : 0 }} transition={{ duration: dur }}
+          stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" />
+      </>
+    ),
+  }[pair];
+
+  const svg = (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {content}
+    </svg>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} aria-label={ariaLabel ?? (active ? "active" : "inactive")} aria-pressed={active}
+        className={cn("inline-flex items-center justify-center cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded", className)}>
+        {svg}
+      </button>
+    );
+  }
+
+  return <span className={cn("inline-flex items-center justify-center", className)} aria-label={ariaLabel}>{svg}</span>;
+}`,
+
+  "draw-path": `"use client";
+
+import * as React from "react";
+import { motion, useReducedMotion, useInView } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+type DrawPreset = "checkmark" | "circle" | "underline" | "arrow";
+type DrawTrigger = "mount" | "hover" | "visible";
+
+interface DrawPathProps {
+  preset?: DrawPreset;
+  trigger?: DrawTrigger;
+  duration?: number;
+  color?: string;
+  strokeWidth?: number;
+  size?: number;
+  loop?: boolean;
+  path?: string;
+  viewBox?: string;
+  className?: string;
+}
+
+const PRESETS: Record<DrawPreset, { path: string; viewBox: string }> = {
+  checkmark: { path: "M4 12 L9 17 L20 6", viewBox: "0 0 24 24" },
+  circle: { path: "M12 2 A10 10 0 1 1 11.99 2", viewBox: "0 0 24 24" },
+  underline: { path: "M2 20 L22 20", viewBox: "0 0 24 24" },
+  arrow: { path: "M4 12 L20 12 M14 6 L20 12 L14 18", viewBox: "0 0 24 24" },
+};
+
+export function DrawPath({ preset = "checkmark", trigger = "mount", duration = 0.6, color = "currentColor", strokeWidth = 2, size = 24, loop = false, path, viewBox, className }: DrawPathProps) {
+  const prefersReduced = useReducedMotion();
+  const ref = React.useRef<SVGSVGElement>(null);
+  const isInView = useInView(ref, { once: !loop, margin: "-10%" });
+  const [hovered, setHovered] = React.useState(false);
+  const resolvedPath = path ?? PRESETS[preset].path;
+  const resolvedViewBox = viewBox ?? PRESETS[preset].viewBox;
+  const shouldDraw = trigger === "mount" || (trigger === "visible" && isInView) || (trigger === "hover" && hovered);
+  const transition = prefersReduced ? { duration: 0 } : {
+    pathLength: { duration, ease: [0.4, 0, 0.2, 1] as number[], repeat: loop ? Infinity : 0 },
+    opacity: { duration: 0.15 },
+  };
+  return (
+    <svg ref={ref} width={size} height={size} viewBox={resolvedViewBox} fill="none" aria-hidden="true"
+      onMouseEnter={() => trigger === "hover" && setHovered(true)}
+      onMouseLeave={() => trigger === "hover" && setHovered(false)}
+      className={cn("overflow-visible", className)}>
+      <motion.path d={resolvedPath} stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" fill="none"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={shouldDraw ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
+        transition={transition} />
+    </svg>
+  );
+}`,
+
+  "slot-counter": `"use client";
+
+import * as React from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+type SlotVariant = "default" | "compact" | "mono-bold";
+
+interface SlotCounterProps {
+  value: number;
+  padStart?: number;
+  prefix?: string;
+  suffix?: string;
+  variant?: SlotVariant;
+  stagger?: number;
+  className?: string;
+}
+
+const VARIANT_CLASS = {
+  default: "text-2xl font-semibold tabular-nums text-zinc-50",
+  compact: "text-base font-medium tabular-nums text-zinc-50",
+  "mono-bold": "text-3xl font-bold font-mono tabular-nums text-zinc-50",
+};
+
+const DIGIT_HEIGHT = {
+  default: "h-9",
+  compact: "h-6",
+  "mono-bold": "h-11",
+};
+
+function DigitColumn({ digit, delay, heightClass, textClass }: { digit: string; delay: number; heightClass: string; textClass: string }) {
+  const prefersReduced = useReducedMotion();
+  return (
+    <div className={cn("relative overflow-hidden inline-flex items-center", heightClass)}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span key={digit}
+          initial={prefersReduced ? { opacity: 0 } : { y: "100%", opacity: 0 }}
+          animate={{ y: "0%", opacity: 1 }}
+          exit={prefersReduced ? { opacity: 0 } : { y: "-100%", opacity: 0 }}
+          transition={prefersReduced ? { duration: 0 } : {
+            y: { type: "spring", stiffness: 300, damping: 28, mass: 0.8, delay },
+            opacity: { duration: 0.12, delay },
+          }}
+          className={cn("inline-block", textClass)}>
+          {digit}
+        </motion.span>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function SlotCounter({ value, padStart, prefix, suffix, variant = "default", stagger = 0.04, className }: SlotCounterProps) {
+  const digits = String(Math.abs(Math.floor(value))).padStart(padStart ?? 0, "0").split("");
+  return (
+    <span className={cn("inline-flex items-baseline gap-[1px]", className)}
+      aria-label={\`\${prefix ?? ""}\${value}\${suffix ?? ""}\`} aria-live="polite" aria-atomic="true">
+      {prefix && <span className={cn(VARIANT_CLASS[variant], "mr-0.5")} aria-hidden="true">{prefix}</span>}
+      {value < 0 && <span className={VARIANT_CLASS[variant]} aria-hidden="true">−</span>}
+      {digits.map((d, i) => (
+        <DigitColumn key={i} digit={d} delay={i * stagger}
+          heightClass={DIGIT_HEIGHT[variant]} textClass={VARIANT_CLASS[variant]} />
+      ))}
+      {suffix && <span className={cn(VARIANT_CLASS[variant], "ml-0.5")} aria-hidden="true">{suffix}</span>}
+    </span>
+  );
+}`,
+
+  "cascade-reveal": `"use client";
+
+import * as React from "react";
+import { motion, useReducedMotion, useInView } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+type CascadeVariant = "blur-in" | "slide-up" | "scale-in";
+
+interface CascadeRevealProps {
+  text: string;
+  variant?: CascadeVariant;
+  direction?: "ltr" | "center-out";
+  stagger?: number;
+  delay?: number;
+  trigger?: "mount" | "visible";
+  className?: string;
+  charClassName?: string;
+  as?: "h1" | "h2" | "h3" | "p" | "span";
+}
+
+const CHAR_VARIANTS = {
+  "blur-in": { hidden: { opacity: 0, y: 12, filter: "blur(4px)" }, visible: { opacity: 1, y: 0, filter: "blur(0px)" } },
+  "slide-up": { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } },
+  "scale-in": { hidden: { opacity: 0, scale: 0.7, y: 8 }, visible: { opacity: 1, scale: 1, y: 0 } },
+};
+
+export function CascadeReveal({ text, variant = "blur-in", direction = "ltr", stagger = 0.025, delay = 0, trigger = "mount", className, charClassName, as: Tag = "span" }: CascadeRevealProps) {
+  const prefersReduced = useReducedMotion();
+  const ref = React.useRef<HTMLElement>(null);
+  const isInView = useInView(ref as React.RefObject<Element>, { once: true, margin: "-5%" });
+  const shouldAnimate = trigger === "mount" || (trigger === "visible" && isInView);
+  const charVariant = CHAR_VARIANTS[variant];
+  const words = text.split(" ");
+  const allChars = text.replace(/ /g, "\\u00A0").split("");
+  const staggerOrder = direction === "ltr"
+    ? allChars.map((_, i) => i)
+    : (() => { const mid = (allChars.length - 1) / 2; return allChars.map((_, i) => Math.abs(i - mid)); })();
+  let charIdx = 0;
+
+  return (
+    <Tag ref={ref as React.Ref<HTMLHeadingElement & HTMLParagraphElement & HTMLSpanElement>}
+      aria-label={text} className={cn("inline-flex flex-wrap gap-x-[0.25em]", className)}>
+      {words.map((word, wIdx) => (
+        <span key={wIdx} className="inline-flex" aria-hidden="true">
+          {word.split("").map((char) => {
+            const order = staggerOrder[charIdx++];
+            return (
+              <span key={charIdx} className="inline-block overflow-hidden">
+                <motion.span className={cn("inline-block", charClassName)}
+                  initial={prefersReduced ? { opacity: 1 } : charVariant.hidden}
+                  animate={shouldAnimate ? (prefersReduced ? { opacity: 1 } : charVariant.visible) : charVariant.hidden}
+                  transition={{ ease: [0.22, 1, 0.36, 1], duration: 0.45, delay: delay + order * stagger }}>
+                  {char}
+                </motion.span>
+              </span>
+            );
+          })}
+        </span>
+      ))}
+    </Tag>
+  );
+}`,
+
+  "ripple-button": `"use client";
+
+import * as React from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+type RippleVariant = "default" | "primary" | "ghost" | "outline";
+
+interface RippleEntry { id: number; x: number; y: number; }
+
+interface RippleButtonProps {
+  children: React.ReactNode;
+  variant?: RippleVariant;
+  size?: "sm" | "md" | "lg" | "xl";
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+const VARIANT_BASE: Record<RippleVariant, string> = {
+  default: "bg-zinc-800 border border-zinc-700 text-zinc-50 hover:bg-zinc-700",
+  primary: "bg-amber-500 text-zinc-950 font-semibold hover:bg-amber-400",
+  ghost: "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60",
+  outline: "border border-zinc-700 text-zinc-300 hover:bg-zinc-800 hover:text-zinc-50",
+};
+
+const RIPPLE_COLOR: Record<RippleVariant, string> = {
+  default: "bg-zinc-500/30", primary: "bg-zinc-950/20", ghost: "bg-zinc-100/10", outline: "bg-zinc-500/20",
+};
+
+const SIZE_MAP = { sm: "h-8 px-3 text-xs rounded-md", md: "h-9 px-4 text-sm rounded-lg", lg: "h-10 px-5 text-sm rounded-lg", xl: "h-12 px-6 text-base rounded-xl" };
+
+let rippleId = 0;
+
+export function RippleButton({ children, variant = "default", size = "md", onClick, disabled, className }: RippleButtonProps) {
+  const prefersReduced = useReducedMotion();
+  const [ripples, setRipples] = React.useState<RippleEntry[]>([]);
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+
+  const spawnRipple = (x: number, y: number) => {
+    if (prefersReduced || disabled) return;
+    const id = ++rippleId;
+    setRipples(prev => [...prev, { id, x, y }]);
+    setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 700);
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      spawnRipple(e.clientX - rect.left, e.clientY - rect.top);
+    }
+    onClick?.(e);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if ((e.key === " " || e.key === "Enter") && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      spawnRipple(rect.width / 2, rect.height / 2);
+    }
+  };
+
+  return (
+    <button ref={buttonRef} type="button" onClick={handleClick} onKeyDown={handleKeyDown} disabled={disabled}
+      className={cn("relative inline-flex items-center justify-center gap-2 font-medium overflow-hidden transition-colors select-none cursor-pointer",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950",
+        "disabled:opacity-50 disabled:cursor-not-allowed", VARIANT_BASE[variant], SIZE_MAP[size], className)}>
+      <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-[inherit]" aria-hidden="true">
+        <AnimatePresence>
+          {ripples.map(r => (
+            <motion.span key={r.id} className={cn("absolute rounded-full", RIPPLE_COLOR[variant])}
+              style={{ left: r.x, top: r.y, width: 8, height: 8, marginLeft: -4, marginTop: -4 }}
+              initial={{ scale: 0, opacity: 1 }}
+              animate={{ scale: 28, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ scale: { type: "spring", stiffness: 260, damping: 22, mass: 0.6 }, opacity: { duration: 0.55, ease: "easeOut", delay: 0.1 } }} />
+          ))}
+        </AnimatePresence>
+      </span>
+      <span className="relative z-10 flex items-center gap-2">{children}</span>
+    </button>
+  );
+}`,
+
+  "ambient-pulse": `"use client";
+
+import * as React from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+type PulseColor = "amber" | "blue" | "green" | "critical" | "violet";
+
+interface AmbientPulseProps {
+  children: React.ReactNode;
+  color?: PulseColor;
+  radius?: number;
+  speed?: number;
+  breathe?: boolean;
+  intensity?: "soft" | "medium" | "strong";
+  className?: string;
+}
+
+const COLOR_MAP: Record<PulseColor, string> = {
+  amber: "rgba(245,158,11,VAR)",
+  blue: "rgba(96,165,250,VAR)",
+  green: "rgba(16,185,129,VAR)",
+  critical: "rgba(239,68,68,VAR)",
+  violet: "rgba(139,92,246,VAR)",
+};
+
+const INTENSITY_RANGE = {
+  soft: [0.12, 0.28] as [number, number],
+  medium: [0.18, 0.42] as [number, number],
+  strong: [0.28, 0.6] as [number, number],
+};
+
+export function AmbientPulse({ children, color = "amber", radius = 32, speed = 3, breathe = true, intensity = "soft", className }: AmbientPulseProps) {
+  const prefersReduced = useReducedMotion();
+  const [minOp, maxOp] = INTENSITY_RANGE[intensity];
+  const shouldBreathe = breathe && !prefersReduced;
+  const bg = COLOR_MAP[color].replace("VAR", String(maxOp));
+
+  return (
+    <div className={cn("relative inline-flex", className)}>
+      <motion.div aria-hidden="true" className="absolute rounded-[inherit] pointer-events-none"
+        style={{ inset: -radius / 2, borderRadius: "inherit", filter: \`blur(\${radius}px)\`, background: bg, zIndex: -1 }}
+        animate={shouldBreathe
+          ? { opacity: [minOp, maxOp, minOp], scale: [1, 1.06, 1] }
+          : { opacity: minOp, scale: 1 }}
+        transition={shouldBreathe
+          ? { duration: speed, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" }
+          : { duration: 0 }} />
+      <div className="relative z-10 w-full">{children}</div>
+    </div>
+  );
+}`,
 };

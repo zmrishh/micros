@@ -934,6 +934,232 @@ export const REGISTRY: RegistryEntry[] = [
     ],
     usageExample: `<SoftCollapse title="What is Feel UI?" variant="faq">Copy-paste motion primitives...</SoftCollapse>`,
   },
+
+  // ─── New unique micro animations ──────────────────────────────────────────────
+  {
+    name: "TiltCard",
+    slug: "tilt-card",
+    category: "signature",
+    description:
+      "A card that tilts in 3D space following the cursor with spring physics. Includes a glare overlay that tracks the light source direction.",
+    tags: ["card", "motion", "signature"],
+    props: [
+      { name: "variant", type: '"subtle" | "deep" | "flat"', default: '"subtle"', description: "Tilt intensity range (±8°, ±15°, or disabled)" },
+      { name: "glare", type: "boolean", default: "true", description: "Show light glare overlay on tilt" },
+      { name: "children", type: "React.ReactNode", required: true, description: "Card content" },
+      { name: "className", type: "string", description: "Wrapper class" },
+    ],
+    variants: [
+      { name: "Subtle", description: "±8° tilt — tasteful, always-on" },
+      { name: "Deep", description: "±15° tilt — dramatic depth" },
+      { name: "Flat", description: "No tilt — reduced-motion safe default" },
+    ],
+    accessibilityNotes: [
+      "Tilt disabled with prefers-reduced-motion",
+      "Card content keyboard accessible",
+      "Glare is aria-hidden decorative overlay",
+    ],
+    usageExample: `<TiltCard variant="subtle"><YourCard /></TiltCard>`,
+  },
+  {
+    name: "ProximityCard",
+    slug: "proximity-card",
+    category: "signature",
+    description:
+      "A card that responds before hover — glow and scale increase proportionally as the cursor approaches, before it even enters the card boundary.",
+    tags: ["card", "motion", "signature"],
+    props: [
+      { name: "activationRadius", type: "number", default: "180", description: "Distance in pixels at which the card starts responding" },
+      { name: "variant", type: '"glow" | "depth" | "minimal"', default: '"glow"', description: "Glow color preset" },
+      { name: "glowColor", type: "string", description: "Custom CSS rgba color override" },
+      { name: "cta", type: "React.ReactNode", description: "Element revealed on actual hover" },
+      { name: "children", type: "React.ReactNode", required: true, description: "Card content" },
+    ],
+    variants: [
+      { name: "Glow", description: "Amber proximity glow" },
+      { name: "Depth", description: "Violet depth effect" },
+      { name: "Minimal", description: "Subtle white-on-dark" },
+    ],
+    accessibilityNotes: [
+      "Proximity effect disabled with prefers-reduced-motion",
+      "CTA content always reachable by keyboard",
+      "Glow overlay is aria-hidden",
+    ],
+    usageExample: `<ProximityCard cta={<Button>Learn more</Button>}><FeatureContent /></ProximityCard>`,
+  },
+  {
+    name: "MorphIcon",
+    slug: "morph-icon",
+    category: "signature",
+    description:
+      "An SVG icon that morphs its path geometry between two states — menu↔close, play↔pause, plus↔check, eye↔eye-off — with smooth interpolation.",
+    tags: ["motion", "signature", "button"],
+    props: [
+      { name: "pair", type: '"menu-close" | "play-pause" | "plus-check" | "eye-toggle"', required: true, description: "Which icon pair to morph between" },
+      { name: "active", type: "boolean", required: true, description: "Current state (false = first icon, true = second)" },
+      { name: "size", type: "number", default: "24", description: "SVG size in px" },
+      { name: "strokeWidth", type: "number", default: "2", description: "Path stroke width" },
+      { name: "color", type: "string", default: '"currentColor"', description: "Stroke color" },
+      { name: "onClick", type: "() => void", description: "If provided, renders as a button with aria-pressed" },
+      { name: "aria-label", type: "string", description: "Accessible label" },
+    ],
+    variants: [
+      { name: "menu-close", description: "Hamburger → X" },
+      { name: "play-pause", description: "Triangle → Two bars" },
+      { name: "plus-check", description: "Plus → Checkmark" },
+      { name: "eye-toggle", description: "Open eye → Closed eye with slash" },
+    ],
+    accessibilityNotes: [
+      "aria-pressed when rendered as button",
+      "aria-label required when onClick is used",
+      "Morph transitions instant with prefers-reduced-motion",
+    ],
+    usageExample: `<MorphIcon pair="menu-close" active={isOpen} onClick={() => setOpen(v => !v)} aria-label="Toggle menu" />`,
+  },
+  {
+    name: "DrawPath",
+    slug: "draw-path",
+    category: "signature",
+    description:
+      "An SVG path that draws itself using pathLength animation. Trigger on mount, hover, or IntersectionObserver. Ships with checkmark, circle, underline, and arrow presets.",
+    tags: ["motion", "signature"],
+    props: [
+      { name: "preset", type: '"checkmark" | "circle" | "underline" | "arrow"', default: '"checkmark"', description: "Built-in path preset" },
+      { name: "trigger", type: '"mount" | "hover" | "visible"', default: '"mount"', description: "What triggers the draw animation" },
+      { name: "duration", type: "number", default: "0.6", description: "Draw duration in seconds" },
+      { name: "color", type: "string", default: '"currentColor"', description: "Stroke color" },
+      { name: "strokeWidth", type: "number", default: "2", description: "Stroke width" },
+      { name: "size", type: "number", default: "24", description: "SVG size" },
+      { name: "loop", type: "boolean", default: "false", description: "Repeat the draw animation" },
+      { name: "path", type: "string", description: "Custom SVG path string (overrides preset)" },
+      { name: "viewBox", type: "string", description: "Custom SVG viewBox for custom paths" },
+    ],
+    variants: [
+      { name: "Checkmark", description: "Completion, success states" },
+      { name: "Circle", description: "Focus rings, progress indicators" },
+      { name: "Underline", description: "Text highlights, section markers" },
+      { name: "Arrow", description: "Direction indicators, CTAs" },
+    ],
+    accessibilityNotes: [
+      "SVG is aria-hidden — pair with text content for context",
+      "Draw animation skipped with prefers-reduced-motion",
+      "visible trigger uses IntersectionObserver (once by default)",
+    ],
+    usageExample: `<DrawPath preset="checkmark" trigger="visible" color="#10b981" size={32} />`,
+  },
+  {
+    name: "SlotCounter",
+    slug: "slot-counter",
+    category: "signature",
+    description:
+      "Numbers that roll like slot-machine digits when the value changes. Each digit column animates independently with staggered spring physics.",
+    tags: ["text", "motion", "signature", "dashboard"],
+    props: [
+      { name: "value", type: "number", required: true, description: "Current numeric value" },
+      { name: "padStart", type: "number", description: "Minimum digits (zero-padded)" },
+      { name: "prefix", type: "string", description: "Static prefix (e.g. '$')" },
+      { name: "suffix", type: "string", description: "Static suffix (e.g. '%')" },
+      { name: "variant", type: '"default" | "compact" | "mono-bold"', default: '"default"', description: "Text style variant" },
+      { name: "stagger", type: "number", default: "0.04", description: "Per-digit stagger delay in seconds" },
+    ],
+    variants: [
+      { name: "Default", description: "2xl semibold — dashboards and stats" },
+      { name: "Compact", description: "base medium — inline counters" },
+      { name: "Mono-bold", description: "3xl mono bold — hero numbers" },
+    ],
+    accessibilityNotes: [
+      "aria-live='polite' with aria-atomic='true'",
+      "aria-label shows full value for screen readers",
+      "Digit columns are aria-hidden",
+      "Slot animation disabled with prefers-reduced-motion",
+    ],
+    usageExample: `<SlotCounter value={activeUsers} prefix="$" suffix="K" variant="mono-bold" />`,
+  },
+  {
+    name: "CascadeReveal",
+    slug: "cascade-reveal",
+    category: "signature",
+    description:
+      "Text that reveals character-by-character with staggered spring orchestration. Unlike word-level TextReveal, this creates a cinematic wave effect. Supports blur-in, slide-up, and scale-in variants.",
+    tags: ["text", "motion", "signature"],
+    props: [
+      { name: "text", type: "string", required: true, description: "Text content to reveal" },
+      { name: "variant", type: '"blur-in" | "slide-up" | "scale-in"', default: '"blur-in"', description: "Character animation style" },
+      { name: "direction", type: '"ltr" | "center-out"', default: '"ltr"', description: "Stagger direction" },
+      { name: "stagger", type: "number", default: "0.025", description: "Per-character delay in seconds" },
+      { name: "delay", type: "number", default: "0", description: "Initial delay before reveal starts" },
+      { name: "trigger", type: '"mount" | "visible"', default: '"mount"', description: "When the reveal begins" },
+      { name: "as", type: '"h1" | "h2" | "h3" | "p" | "span"', default: '"span"', description: "HTML element" },
+    ],
+    variants: [
+      { name: "Blur-in", description: "Chars emerge from blur — cinematic" },
+      { name: "Slide-up", description: "Chars rise from below" },
+      { name: "Scale-in", description: "Chars scale up from small" },
+    ],
+    accessibilityNotes: [
+      "aria-label contains full text for screen readers",
+      "Individual chars are aria-hidden",
+      "All chars shown immediately with prefers-reduced-motion",
+    ],
+    usageExample: `<CascadeReveal text="Interfaces that feel alive" variant="blur-in" as="h1" className="text-5xl font-bold" />`,
+  },
+  {
+    name: "RippleButton",
+    slug: "ripple-button",
+    category: "signature",
+    description:
+      "A button with spring-physics ripple originating from the exact click or tap point. Multiple ripples can coexist. Keyboard-triggered ripple originates from center.",
+    tags: ["button", "motion", "signature"],
+    props: [
+      { name: "variant", type: '"default" | "primary" | "ghost" | "outline"', default: '"default"', description: "Button visual style" },
+      { name: "size", type: '"sm" | "md" | "lg" | "xl"', default: '"md"', description: "Button size" },
+      { name: "onClick", type: "(e: React.MouseEvent) => void", description: "Click handler" },
+      { name: "disabled", type: "boolean", description: "Disables button and ripple" },
+      { name: "type", type: '"button" | "submit" | "reset"', default: '"button"', description: "Button type" },
+      { name: "children", type: "React.ReactNode", required: true, description: "Button label" },
+    ],
+    variants: [
+      { name: "Default", description: "Dark fill with zinc ripple" },
+      { name: "Primary", description: "Amber fill with dark ripple" },
+      { name: "Ghost", description: "No fill with subtle ripple" },
+      { name: "Outline", description: "Bordered with zinc ripple" },
+    ],
+    accessibilityNotes: [
+      "Focus-visible ring visible",
+      "Ripple spawns on keyboard Space/Enter from center",
+      "Ripple effect disabled with prefers-reduced-motion",
+      "Disabled state suppresses ripple and click",
+    ],
+    usageExample: `<RippleButton variant="primary" onClick={handleSubmit}>Submit</RippleButton>`,
+  },
+  {
+    name: "AmbientPulse",
+    slug: "ambient-pulse",
+    category: "signature",
+    description:
+      "A breathing glow wrapper for any element. The glow breathes (scale + opacity oscillate on a slow loop) to communicate live, active, or critical state without being distracting.",
+    tags: ["motion", "signature", "status"],
+    props: [
+      { name: "color", type: '"amber" | "blue" | "green" | "critical" | "violet"', default: '"amber"', description: "Glow color" },
+      { name: "radius", type: "number", default: "32", description: "Glow blur spread radius in pixels" },
+      { name: "speed", type: "number", default: "3", description: "Breath cycle duration in seconds" },
+      { name: "breathe", type: "boolean", default: "true", description: "Animate the glow (false = static)" },
+      { name: "intensity", type: '"soft" | "medium" | "strong"', default: '"soft"', description: "Glow opacity range" },
+      { name: "children", type: "React.ReactNode", required: true, description: "Wrapped element" },
+    ],
+    variants: [
+      { name: "Amber", description: "Active, selected, live" },
+      { name: "Blue", description: "AI, processing, syncing" },
+      { name: "Green", description: "Healthy, connected, success" },
+      { name: "Critical", description: "Error, alert, urgent" },
+    ],
+    accessibilityNotes: [
+      "Glow is aria-hidden and purely decorative",
+      "State meaning must be in text/ARIA attributes of children",
+      "Breathing loop disabled with prefers-reduced-motion",
+    ],
+    usageExample: `<AmbientPulse color="blue" intensity="soft"><AIPanel /></AmbientPulse>`,
+  },
 ];
 
 export function getComponentBySlug(slug: string): RegistryEntry | undefined {

@@ -41,6 +41,14 @@ import { TraceBeam } from "@/components/library/signature/trace-beam";
 import { RevealStack } from "@/components/library/signature/reveal-stack";
 import { MicroTimeline } from "@/components/library/signature/micro-timeline";
 import { SoftCollapse } from "@/components/library/signature/soft-collapse";
+import { TiltCard } from "@/components/library/signature/tilt-card";
+import { ProximityCard } from "@/components/library/signature/proximity-card";
+import { MorphIcon } from "@/components/library/signature/morph-icon";
+import { DrawPath } from "@/components/library/signature/draw-path";
+import { SlotCounter } from "@/components/library/signature/slot-counter";
+import { CascadeReveal } from "@/components/library/signature/cascade-reveal";
+import { RippleButton } from "@/components/library/signature/ripple-button";
+import { AmbientPulse } from "@/components/library/signature/ambient-pulse";
 import { Input } from "@/components/ui/input";
 import { FileText, Settings, HelpCircle } from "lucide-react";
 
@@ -561,6 +569,163 @@ function SoftCollapsePreview() {
   );
 }
 
+// ── New unique animation previews ─────────────────────────────────────────────
+function TiltCardPreview() {
+  return (
+    <div className="flex flex-wrap gap-4 justify-center">
+      <TiltCard variant="subtle">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 w-40">
+          <p className="text-xs text-zinc-500 mb-1">Subtle</p>
+          <p className="text-sm font-medium text-zinc-200">Hover me</p>
+        </div>
+      </TiltCard>
+      <TiltCard variant="deep">
+        <div className="rounded-2xl border border-zinc-700 bg-zinc-900 p-5 w-40">
+          <p className="text-xs text-zinc-500 mb-1">Deep</p>
+          <p className="text-sm font-medium text-zinc-200">Hover me</p>
+        </div>
+      </TiltCard>
+    </div>
+  );
+}
+
+function ProximityCardPreview() {
+  return (
+    <div className="flex justify-center">
+      <ProximityCard
+        variant="glow"
+        activationRadius={160}
+        cta={
+          <div className="px-5 pb-5">
+            <button type="button" className="w-full h-8 rounded-lg bg-amber-500 text-zinc-950 text-xs font-semibold">
+              Get started →
+            </button>
+          </div>
+        }
+      >
+        <div className="p-5 w-60">
+          <p className="text-xs text-zinc-500 mb-2">Feature card</p>
+          <p className="text-sm font-medium text-zinc-200 leading-snug">Approach the card to feel the glow</p>
+        </div>
+      </ProximityCard>
+    </div>
+  );
+}
+
+function MorphIconPreview() {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [playing, setPlaying] = React.useState(false);
+  const [checked, setChecked] = React.useState(false);
+  const [eyeOpen, setEyeOpen] = React.useState(true);
+  return (
+    <div className="flex items-center gap-6 justify-center flex-wrap">
+      <div className="flex flex-col items-center gap-1.5">
+        <MorphIcon pair="menu-close" active={menuOpen} onClick={() => setMenuOpen(v => !v)} aria-label="Toggle menu" size={28} color="white" />
+        <span className="text-[10px] text-zinc-600">menu-close</span>
+      </div>
+      <div className="flex flex-col items-center gap-1.5">
+        <MorphIcon pair="play-pause" active={playing} onClick={() => setPlaying(v => !v)} aria-label="Toggle play" size={28} color="white" />
+        <span className="text-[10px] text-zinc-600">play-pause</span>
+      </div>
+      <div className="flex flex-col items-center gap-1.5">
+        <MorphIcon pair="plus-check" active={checked} onClick={() => setChecked(v => !v)} aria-label="Toggle check" size={28} color="white" />
+        <span className="text-[10px] text-zinc-600">plus-check</span>
+      </div>
+      <div className="flex flex-col items-center gap-1.5">
+        <MorphIcon pair="eye-toggle" active={!eyeOpen} onClick={() => setEyeOpen(v => !v)} aria-label="Toggle visibility" size={28} color="white" />
+        <span className="text-[10px] text-zinc-600">eye-toggle</span>
+      </div>
+    </div>
+  );
+}
+
+function DrawPathPreview() {
+  const [key, setKey] = React.useState(0);
+  return (
+    <div className="flex flex-col items-center gap-5">
+      <div className="flex items-center gap-6 flex-wrap justify-center">
+        {(["checkmark", "circle", "underline", "arrow"] as const).map((preset) => (
+          <div key={`${preset}-${key}`} className="flex flex-col items-center gap-1.5">
+            <DrawPath preset={preset} size={32} strokeWidth={2.5} color="#f59e0b" trigger="mount" />
+            <span className="text-[10px] text-zinc-600">{preset}</span>
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={() => setKey(k => k + 1)} className="text-xs text-zinc-600 hover:text-zinc-400">
+        Replay →
+      </button>
+    </div>
+  );
+}
+
+function SlotCounterPreview() {
+  const [value, setValue] = React.useState(1284);
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <SlotCounter value={value} prefix="$" suffix="K" variant="mono-bold" />
+      <div className="flex gap-2">
+        {[1284, 9421, 42000, 7].map((v) => (
+          <button key={v} type="button" onClick={() => setValue(v)}
+            className="px-2.5 py-1 text-xs rounded-lg border border-zinc-700 text-zinc-500 hover:text-zinc-200 hover:border-zinc-600 transition-colors">
+            {v}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CascadeRevealPreview() {
+  const [key, setKey] = React.useState(0);
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <CascadeReveal
+        key={`blur-${key}`}
+        text="Interfaces that feel alive"
+        variant="blur-in"
+        as="h2"
+        className="text-xl font-semibold text-zinc-50 text-center"
+      />
+      <CascadeReveal
+        key={`slide-${key}`}
+        text="Copy-paste motion primitives"
+        variant="slide-up"
+        delay={0.3}
+        as="p"
+        className="text-sm text-zinc-500 text-center"
+      />
+      <button type="button" onClick={() => setKey(k => k + 1)} className="text-xs text-zinc-600 hover:text-zinc-400">
+        Replay →
+      </button>
+    </div>
+  );
+}
+
+function RippleButtonPreview() {
+  return (
+    <div className="flex flex-wrap items-center gap-3 justify-center">
+      <RippleButton variant="primary">Deploy now</RippleButton>
+      <RippleButton variant="default">Save draft</RippleButton>
+      <RippleButton variant="outline">Cancel</RippleButton>
+      <RippleButton variant="ghost">Learn more</RippleButton>
+    </div>
+  );
+}
+
+function AmbientPulsePreview() {
+  return (
+    <div className="flex flex-wrap items-center gap-6 justify-center">
+      {(["amber", "blue", "green", "critical"] as const).map((color) => (
+        <AmbientPulse key={color} color={color} radius={20} intensity="medium">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5">
+            <p className="text-xs font-medium text-zinc-300 capitalize">{color}</p>
+          </div>
+        </AmbientPulse>
+      ))}
+    </div>
+  );
+}
+
 // ── Slug → Preview map ────────────────────────────────────────────────────────
 const PREVIEW_MAP: Record<string, React.ComponentType> = {
   "copy-button": CopyButtonPreview,
@@ -597,6 +762,14 @@ const PREVIEW_MAP: Record<string, React.ComponentType> = {
   "reveal-stack": RevealStackPreview,
   "micro-timeline": MicroTimelinePreview,
   "soft-collapse": SoftCollapsePreview,
+  "tilt-card": TiltCardPreview,
+  "proximity-card": ProximityCardPreview,
+  "morph-icon": MorphIconPreview,
+  "draw-path": DrawPathPreview,
+  "slot-counter": SlotCounterPreview,
+  "cascade-reveal": CascadeRevealPreview,
+  "ripple-button": RippleButtonPreview,
+  "ambient-pulse": AmbientPulsePreview,
 };
 
 interface ComponentPreviewSectionProps {
